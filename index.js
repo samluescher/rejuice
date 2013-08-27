@@ -93,12 +93,6 @@ var mongoMapReduceFunctions =
 		iterFields(aggregates, doc, function(fieldName, doc) {
 			var extremes = getAttr(doc, fieldName);
 			// doc.extremes is modified by reference
-			if (extremes.min == extremes.max) {
-				extremes.value = extremes.min;
-				delete(extremes.min);
-				delete(extremes.max);
-			}
-
 			setStats(extremes);
 		});
 
