@@ -1,7 +1,9 @@
 var coordinates = require('../../../geogoose/').coordinates,
 	coordinates2d = coordinates.coordinates2d,
 	getBounds = coordinates.getBounds,
-	findExtremes = require('../../../utils').findExtremes,
+	utils = require('../../../utils'),
+	findExtremes = utils.findExtremes,
+	setStats = utils.setStats,
 	util = require('../../import/data_transform/util'),
 	getAttr = util.getAttr, setAttr = util.setAttr;
 
@@ -329,6 +331,7 @@ module.exports = {
 		setAttr: setAttr,
 		isArray: isArray,
 		findExtremes: findExtremes,
+		setStats: setStats,
 		arrayMap: arrayMap,
 		arrayReduce: arrayReduce,
 		iterFields: iterFields,

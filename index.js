@@ -98,11 +98,8 @@ var mongoMapReduceFunctions =
 				delete(extremes.min);
 				delete(extremes.max);
 			}
-			if (!isNaN(extremes.sum)) {
-				extremes.avg = extremes.sum / extremes.count;
-			} else {
-				delete extremes.sum;
-			}
+
+			setStats(extremes);
 		});
 
 		if (events.finalize) {
