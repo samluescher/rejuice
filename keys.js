@@ -264,7 +264,7 @@ var EmitKey =
 						w = l[1][0][0], s = l[1][0][1], e = h[1][1][0], n = h[1][1][1];
 					return [this.prefix + l[0] + ',' + h[0], { 
 						type: 'Polygon', 
-						coordinates: [[ [w,s], [e,s], [e,n], [w,n] ]]
+						coordinates: [[ [w,s], [e,s], [e,n], [w,n], [w,s] ]]
 					}];
 				} else if (isArray(geometry[0]) && isArray(geometry[1])) {
 					// geometry is a bbox [[w,s],[e,n]]
