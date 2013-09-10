@@ -148,6 +148,7 @@ var EmitKey =
 		Daily: function(t) 
 		{
 			this.get = function(t) {
+				var t = new Date(t);
 				return [
 					t.getFullYear()+'-'+lpad(t.getMonth(), '0', 2)+'-'+lpad(t.getUTCDate(), '0', 2),
 					new Date(t.getFullYear(), t.getMonth(), t.getUTCDate())
@@ -167,6 +168,7 @@ var EmitKey =
 		Weekly: function(t) 
 		{
 			this.get = function(t) {
+				var t = new Date(t);
 				var week = getWeek(t, 1);
 				var day = t.getDay(),
 			      diff = t.getDate() - day + (day == 0 ? -6 : 1);
@@ -190,6 +192,7 @@ var EmitKey =
 		Yearly: function(t) 
 		{
 			this.get = function(t) {
+				var t = new Date(t);
 				return [
 					t.getFullYear(),
 					new Date(t.getFullYear(), 0, 1)
