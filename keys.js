@@ -251,21 +251,50 @@ var EmitKey =
 					return [
 						gX + ',' + gY,
 						//coordinates2d(x, y)
-						[[w, s], [e, n]]
+						[[w, s], [e, n]],
+						[gX, gY]	
 					];
 				};
 
 				if (geometry.coordinates) {
 					// geometry is GeoJSON 
-					var bounds = getBounds(geometry.coordinates);
-					if (!bounds) return;
-					var l = _getTile.call(this, bounds[0]),
-						h = _getTile.call(this, bounds[1]),
-						w = l[1][0][0], s = l[1][0][1], e = h[1][1][0], n = h[1][1][1];
-					return [this.prefix + l[0] + ',' + h[0], { 
-						type: 'Polygon', 
-						coordinates: [[ [w,s], [e,s], [e,n], [w,n], [w,s] ]]
-					}];
+
+					switch (geometry.type) {
+
+						case 'Point':
+							var p = _getTile.call(this, geometry.coordinates);
+							return [this.prefix + p[0], { 
+								type: 'Point', 
+								coordinates: [(w + e)/2, (s + n)/2]
+							}];
+
+						case 'LineString':
+							var p0 = geometry.coordinates[0], 
+								p1 = geometry.coordinates[geometry.coordinates.length - 1],
+								l = _getTile.call(this, p0),
+								h = _getTile.call(this, p1);
+							if (l[1][0][0] != h[1][0][0] || l[1][0][1] != h[1][0][1]) {
+								return [this.prefix + l[0] + ',' + h[0], { 
+									type: 'LineString', 
+									coordinates: [ l[1][0], h[1][0] ]
+								}];
+							}
+							// treat as Polygon if closed
+
+						case 'Polygon':
+						case 'MultiPolygon':
+							var bounds = getBounds(geometry.coordinates);
+							if (!bounds) return;
+							var l = _getTile.call(this, bounds[0]),
+								h = _getTile.call(this, bounds[1]),
+								w = l[1][0][0], s = l[1][0][1], e = h[1][1][0], n = h[1][1][1];
+								return [this.prefix + l[0] + ',' + h[0], { 
+									type: 'Polygon', 
+									coordinates: [[ [w,s], [e,s], [e,n], [w,n], [w,s] ]]
+								}];
+					}
+
+
 				} else if (isArray(geometry[0]) && isArray(geometry[1])) {
 					// geometry is a bbox [[w,s],[e,n]]
 					var bounds = getBounds(geometry);
