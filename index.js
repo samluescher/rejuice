@@ -43,7 +43,7 @@ var mongoMapReduceFunctions =
 
 		// call findExtremes to initialize each aggregate field 
 		iterFields(aggregates, this, function(fieldName, doc) {
-			// if field is already in emitted values (see above), is that value for extremes
+			// if field is already in emitted values (see above), use that value for extremes
 			var value = getAttr(emitted, fieldName);
 			if (value == undefined) {
 				// otherwise use original value for extremes
@@ -57,7 +57,7 @@ var mongoMapReduceFunctions =
 		}
 
 		if (DEBUG) {
-			print('emit:key = '+fullKey);
+			print('emit:key = ' + fullKey);
 		}
 		emit(fullKey, emitted);
 	},
@@ -165,9 +165,11 @@ var runMapReduce = function(collectionName, outputCollectionName, emitKeys, opti
 		,keeptemp: true
 	};
 
+	var logOptions = [];
 	for (k in options) {
-		if (k != 'scope') {
+		if (['query', 'sort', 'limit', 'jsMode'].indexOf(k) != -1) {
 			params[k] = options[k];
+			logOptions.push(k + ': ' + JSON.stringify(options[k]));
 		} 
 	}
 
@@ -183,6 +185,8 @@ var runMapReduce = function(collectionName, outputCollectionName, emitKeys, opti
 		console.info('  * running MapReduce for collection ' + collectionName + ' ==> ' + outputCollectionName);
 		console.info('  * emit key: '+info.join(keys.KEY_SEPARATOR));
 		console.info('  * aggregate values: '+scope.aggregates.join(', '));
+		console.info('  * options: '+logOptions.join(', '));
+		console.info('  * executing MapReduce...');
 		mongoose.connection.db.executeDbCommand(params, function(err, op) {
 			if (err || (op.documents.length && op.documents[0].errmsg)) {
 				if (!err) {
@@ -195,7 +199,7 @@ var runMapReduce = function(collectionName, outputCollectionName, emitKeys, opti
 				for (var k in emitKeys) {
 					if (emitKeys[k].index) {
 						var fieldName = 'value.' + k;
-						console.log('  * building key index for '+fieldName+' ...');
+						console.info('  * building key index for '+fieldName+' ...');
 						if (!emitKeys[k].index.call(emitKeys[k], 
 								db.collection(outputCollectionName), fieldName)) {
 							console.error('ERROR: could not build index');
@@ -206,7 +210,7 @@ var runMapReduce = function(collectionName, outputCollectionName, emitKeys, opti
 				if (options.indexes) {
 					for (var k in options.indexes) {
 						var fieldName = 'value.' + k;
-						console.log('  * building index for '+fieldName+' ...');
+						console.info('  * building index for '+fieldName+' ...');
 						var index = {};
 						index[fieldName] = options.indexes[k];
 						db.collection(outputCollectionName).ensureIndex(index, function(err) {
@@ -218,7 +222,11 @@ var runMapReduce = function(collectionName, outputCollectionName, emitKeys, opti
 					}
 				}
 
-				console.success('  * MapReduce successful', op.documents[0].counts); 
+				console.success('  * MapReduce successful:', op.documents[0].counts);
+				if (op.documents[0].timing) {
+					delete op.documents[0].timing.mode;
+					console.info('  * Timing:', op.documents[0].timing);
+				} 
 			}
 
 			callback(err);
