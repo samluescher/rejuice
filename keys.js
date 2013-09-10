@@ -265,7 +265,7 @@ var EmitKey =
 							var p = _getTile.call(this, geometry.coordinates);
 							return [this.prefix + p[0], { 
 								type: 'Point', 
-								coordinates: [(w + e)/2, (s + n)/2]
+								coordinates: p[1][0]
 							}];
 
 						case 'LineString':
