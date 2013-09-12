@@ -218,23 +218,29 @@ var EmitKey =
 			var opts = options || {index: true};
 			this.gridW = gridW;
 			this.gridH = gridH;
+			this.gridHW = gridW ? gridW / 2 : 0;
+			this.gridHH = gridH ? gridH / 2 : 0;
 			var name = gridW != gridH ? 
 				(gridW != undefined ? gridW : 'x') + '*' + (gridH != undefined ? gridH : 'y') 
 				: (gridW != undefined ? gridW + '' : '')
-			this.prefix = name + ':';
+			this.prefix = /*name + ':'*/'';
 
 			this.get = function(geometry) {
 				if (!geometry) return;
 
-				var _getTile = function(coordinates) {
-					if (coordinates.length < 2 || isNaN(coordinates[0]) || isNaN(coordinates[1])) return;
+				/* returns 
+					{
+						[gridWest, gridSouth],
+						[[realWest, realSouth], [realEast, realNorth]]
+					}
+				*/
+				var _getTileCoords = function(coordinates) 
+				{
 					var gW = this.gridW,
 						gH = this.gridH,
-						c = coordinates2d(coordinates),
-						w = c[0], e = w,
-						s = c[1], n = s,
-						gX = w, 
-						gY = s;
+						w = coordinates[0], e = w,
+						s = coordinates[1], n = s,
+						gX = w, gY = s;
 
 					if (gW != undefined) {
 						// west of tile
@@ -252,65 +258,63 @@ var EmitKey =
 					}
 
 					return [
-						gX + ',' + gY,
-						//coordinates2d(x, y)
+						[gX, gY],
 						[[w, s], [e, n]],
-						[gX, gY]	
 					];
 				};
 
 				if (geometry.coordinates) {
 					// geometry is GeoJSON 
 
+					var c;
 					switch (geometry.type) {
-
-						case 'Point':
-							var p = _getTile.call(this, geometry.coordinates);
-							return [this.prefix + p[0], { 
-								type: 'Point', 
-								coordinates: p[1][0]
-							}];
 
 						case 'LineString':
 							var p0 = geometry.coordinates[0], 
-								p1 = geometry.coordinates[geometry.coordinates.length - 1],
-								l = _getTile.call(this, p0),
-								h = _getTile.call(this, p1);
-							if (l[1][0][0] != h[1][0][0] || l[1][0][1] != h[1][0][1]) {
-								return [this.prefix + l[0] + ',' + h[0], { 
+								p1 = geometry.coordinates[geometry.coordinates.length - 1];
+								c0 = _getTileCoords.call(this, p0),
+								c1 = _getTileCoords.call(this, p1),
+								start = [c0[1][0][0] + this.gridHW, c0[1][0][1] + this.gridHH],
+								end = [c1[1][1][0] - this.gridHW, c1[1][1][1] - this.gridHH];
+							if (Math.abs(start[0] - end[0]) >= this.gridW || Math.abs(start[1] - end[1]) > this.gridH) {
+								// if not closed, return LineString from center of start rect to center of end rect
+								return [this.prefix + c0[0] + ',' + c1[0], { 
 									type: 'LineString', 
-									coordinates: [ l[1][0], h[1][0] ]
+									coordinates: [start, end]
 								}];
 							}
-							// treat as Polygon if closed
+							// if closed, treat as Point since MongoDB would throw an error
+							// for LineString with two identical coordinate pairs 
+							c = _getTileCoords.call(this, geometry.coordinates[0]);
+
+						case 'Point':
+							// for points, return Point at center of rect
+							if (!c) {
+								c = _getTileCoords.call(this, geometry.coordinates);
+							}
+							return [this.prefix + c[0], { 
+								type: 'Point', 
+								coordinates: [
+									c[1][0][0] + this.gridHW, c[1][0][1] + this.gridHH
+								]
+							}];
 
 						case 'Polygon':
-						case 'MultiPolygon':
 							var bounds = getBounds(geometry.coordinates);
-							if (!bounds) return;
-							var l = _getTile.call(this, bounds[0]),
-								h = _getTile.call(this, bounds[1]),
-								w = l[1][0][0], s = l[1][0][1], e = h[1][1][0], n = h[1][1][1];
-								return [this.prefix + l[0] + ',' + h[0], { 
-									type: 'Polygon', 
-									coordinates: [[ [w,s], [e,s], [e,n], [w,n], [w,s] ]]
-								}];
-					}
+								csw = _getTileCoords.call(this, bounds[0]),
+								cne = _getTileCoords.call(this, bounds[1]);
 
-
-				} else if (isArray(geometry[0]) && isArray(geometry[1])) {
-					// geometry is a bbox [[w,s],[e,n]]
-					var bounds = getBounds(geometry);
-					if (!bounds) return;
-					var l = _getTile.call(this, bounds[0]),
-						h = _getTile.call(this, bounds[1]);
-					return [this.prefix + l[0] + ',' + h[0], [l[1][0], h[1][1]]];
-				} else if (isArray(geometry) && geometry.length > 1) {
-					// geometry is [x,y] 
-					var t = _getTile.call(this, geometry);
-					return [this.prefix + t[0], t[1]];
-				} else {
-					return;
+							return [this.prefix + csw[0] + ',' + cne[0], { 
+								type: 'Polygon', 
+								coordinates: [[
+									csw[1][0], 
+									[cne[1][1][0], csw[1][0][1]],
+									cne[1][1],
+									[csw[1][0][0], cne[1][1][1]],
+									csw[1][0]
+								]]
+							}];
+					} // switch
 				}
 			};
 
