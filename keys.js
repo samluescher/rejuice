@@ -1,5 +1,4 @@
 var coordinates = require('../../../geogoose/').coordinates,
-	coordinates2d = coordinates.coordinates2d,
 	getBounds = coordinates.getBounds,
 	utils = require('../../../utils'),
 	findExtremes = utils.findExtremes,
@@ -358,8 +357,6 @@ module.exports = {
 	// apart from the EmitKey object itself, this.
 	scopeFunctions: {
 		lpad: lpad,
-		overflow: coordinates.overflow,
-		coordinates2d: coordinates.coordinates2d,
 		getBounds: coordinates.getBounds,
 		bboxFromBounds: coordinates.bboxFromBounds,
 		getWeek: getWeek,
