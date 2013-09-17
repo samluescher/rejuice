@@ -265,10 +265,24 @@ var EmitKey =
 				if (geometry.coordinates) {
 					// geometry is GeoJSON 
 
-					var c;
+					var returnType, c;
 					switch (geometry.type) {
+						case 'LineString':
+							returnType = geometry.coordinates.length == 2 ?
+								'LineString': 'Polygon';
+							break;
+						case 'Point':
+							returnType = 'Point';
+							break;
+						default:
+							returnType = 'Polygon';							
+					}
+
+
+					switch (returnType) {
 
 						case 'LineString':
+							var isLine = geometry.coordinates.length;
 							var p0 = geometry.coordinates[0], 
 								p1 = geometry.coordinates[geometry.coordinates.length - 1];
 								c0 = _getTileCoords.call(this, p0),
@@ -276,13 +290,14 @@ var EmitKey =
 								start = [c0[1][0][0] + this.gridHW, c0[1][0][1] + this.gridHH],
 								end = [c1[1][1][0] - this.gridHW, c1[1][1][1] - this.gridHH];
 							if (Math.abs(start[0] - end[0]) >= this.gridW || Math.abs(start[1] - end[1]) > this.gridH) {
-								// if not closed, return LineString from center of start rect to center of end rect
+								// if start in same tile as end, return LineString from center of start rect 
+								// to center of end rect
 								return [this.prefix + c0[0] + ',' + c1[0], { 
 									type: 'LineString', 
 									coordinates: [start, end]
 								}];
 							}
-							// if closed, treat as Point since MongoDB would throw an error
+							// if start == end, treat as Point since MongoDB would throw an error
 							// for LineString with two identical coordinate pairs 
 							c = _getTileCoords.call(this, geometry.coordinates[0]);
 
