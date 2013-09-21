@@ -1,4 +1,5 @@
 var coordinates = require('../../../geogoose/').coordinates,
+	coordinates2d = coordinates.coordinates2d,
 	getBounds = coordinates.getBounds,
 	utils = require('../../../utils'),
 	findExtremes = utils.findExtremes,
@@ -294,7 +295,7 @@ var EmitKey =
 								// to center of end rect
 								return [this.prefix + c0[0] + ',' + c1[0], { 
 									type: 'LineString', 
-									coordinates: [start, end]
+									coordinates: [coordinates2d(start), coordinates2d(end)]
 								}];
 							}
 							// if start == end, treat as Point since MongoDB would throw an error
@@ -308,9 +309,8 @@ var EmitKey =
 							}
 							return [this.prefix + c[0], { 
 								type: 'Point', 
-								coordinates: [
-									c[1][0][0] + this.gridHW, c[1][0][1] + this.gridHH
-								]
+								coordinates: 
+									coordinates2d([c[1][0][0] + this.gridHW, c[1][0][1] + this.gridHH])
 							}];
 
 						case 'Polygon':
@@ -321,11 +321,11 @@ var EmitKey =
 							return [this.prefix + csw[0] + ',' + cne[0], { 
 								type: 'Polygon', 
 								coordinates: [[
-									csw[1][0], 
-									[cne[1][1][0], csw[1][0][1]],
-									cne[1][1],
-									[csw[1][0][0], cne[1][1][1]],
-									csw[1][0]
+									coordinates2d(csw[1][0]), 
+									coordinates2d([cne[1][1][0], csw[1][0][1]]),
+									coordinates2d(cne[1][1]),
+									coordinates2d([csw[1][0][0], cne[1][1][1]]),
+									coordinates2d(csw[1][0])
 								]]
 							}];
 					} // switch
@@ -374,6 +374,8 @@ module.exports = {
 		lpad: lpad,
 		getBounds: coordinates.getBounds,
 		bboxFromBounds: coordinates.bboxFromBounds,
+		coordinates2d: coordinates2d,
+		overflow: coordinates.overflow,
 		getWeek: getWeek,
 		getAttr: getAttr,
 		setAttr: setAttr,
