@@ -1,121 +1,23 @@
 var	Code = require('mongodb').Code,
 	mongoose = require('mongoose'),
-	keys = require('./keys.js'),
-	EmitKey = keys.EmitKey,
-	scopeFunctions = keys.scopeFunctions,
-	getAttr = keys.scopeFunctions.getAttr,
-	console = require('../../../ext-console.js');
+	mappers = require('./mappers'),
+	Mapper = mappers.Mapper,
+	console = require('../../../ext-console.js'),
+	util = require('./util'),
+	scopeFunctions = require('./scope_functions'),
+	phases = require('./phases');
 
-
-var mongoMapReduceFunctions = 
-{
-	map: function() 
-	{
-		if (DEBUG) {
-			print('map:_id = '+this._id);
-		}
-		var emitted = {count: 1};
-
-		// get the combined emit key 
-		var keySegments = [];
-		for (var k in emitKeys) {
-			// get the emit key from the EmitKey's get() method
-			// var f = emitKeys[k].get;
-			var f = emitKeys_code[k]; 
-				keyContent = f.call(emitKeys[k], getAttr(this, k), this);
-			
-			// if no key is returned, do not emit.
-			if (!keyContent) return;
-
-			if (isArray(keyContent)) {
-				// if the return value is an Array, the first element is the emit key content
-				// and the second is an arbitrary value to be inserted into the data
-				keySegments.push(keyContent[0]);
-				setAttr(emitted, k, keyContent[1]);
-			} else {
-				// otherwise the the emit key content is inserted into the data
-				keySegments.push(keyContent);
-				setAttr(emitted, k, keyContent);
-			}
-		}
-		var fullKey = keySegments.join(KEY_SEPARATOR);
-
-
-		// call findExtremes to initialize each aggregate field 
-		iterFields(aggregates, this, function(fieldName, doc) {
-			// if field is already in emitted values (see above), use that value for extremes
-			var value = getAttr(emitted, fieldName);
-			if (value == undefined) {
-				// otherwise use original value for extremes
-				value = getAttr(doc, fieldName)
-			}
-			setAttr(emitted, fieldName, findExtremes(value));
-		});
-
-		if (events.emit) {
-			events.emit(fullKey, emitted);
-		}
-
-		if (DEBUG) {
-			print('emit:key = ' + fullKey);
-		}
-		emit(fullKey, emitted);
-	},
-
-	reduce: function(key, docs) 
-	{
-		// initialize return object
-		var reduced = {count: 0};
-		// copy all emit key values from first element
-		for (var k in emitKeys) {
-			setAttr(reduced, k, getAttr(docs[0], k));
-		}
-
-		docs.forEach(function(doc) {
-			// add count from reduced document to total count
-			reduced.count += doc.count;
-			// call findExtremes over all aggregate values
-			iterFields(aggregates, doc, function(fieldName, doc) {
-				setAttr(reduced, fieldName, findExtremes(getAttr(doc, fieldName), getAttr(reduced, fieldName)));
-			});
-		});
-
-		if (events.reduce) {
-			events.reduce(key, reduced);
-		}
-
-		return reduced;
-	},
-
-	finalize: function(key, doc) 
-	{
-		// determine average
-		iterFields(aggregates, doc, function(fieldName, doc) {
-			var extremes = getAttr(doc, fieldName);
-			// doc.extremes is modified by reference
-			setStats(extremes);
-		});
-
-		if (events.finalize) {
-			events.finalize(key, doc);
-		}
-
-		return doc;
-	}
-};
-
-
-var runMapReduce = function(collectionName, outputCollectionName, emitKeys, options, callback) 
+var runMapReduce = function(collectionName, outputCollectionName, mappers, options, callback) 
 {
 	var options = options || {};
 
 	var scope = {
 		aggregates: !options.aggregates ? []
-			: (isArray(options.aggregates) ? options.aggregates : [options.aggregates]),
-		emitKeys: emitKeys,
-		emitKeys_code: {},
+			: (Array.isArray(options.aggregates) ? options.aggregates : [options.aggregates]),
+		mappers: mappers,
+		mappers_code: {},
 		events: {},
-		KEY_SEPARATOR: keys.KEY_SEPARATOR,
+		KEY_SEPARATOR: mappers.KEY_SEPARATOR,
 		DEBUG: false
 	};
 
@@ -133,11 +35,11 @@ var runMapReduce = function(collectionName, outputCollectionName, emitKeys, opti
 		scope.events[eventName] = new Code(options.events[eventName]);
 	}
 
- 	// Same goes for all EmitKey get methods. 
+ 	// Same goes for all Mapper get methods. 
  	// Note that when these functions are called from the map() function, 
- 	// they are passed the EmitKey object.
-	for (var keyName in emitKeys) {
-		scope.emitKeys_code[keyName] = new Code(emitKeys[keyName].get);
+ 	// they are passed the Mapper object.
+	for (var keyName in mappers) {
+		scope.mappers_code[keyName] = new Code(mappers[keyName].map);
 	}
 
 	if (options.scope) {
@@ -156,9 +58,9 @@ var runMapReduce = function(collectionName, outputCollectionName, emitKeys, opti
 
 	var params = {
 		mapreduce: collectionName
-		,map: mongoMapReduceFunctions.map.toString()
-		,reduce: mongoMapReduceFunctions.reduce.toString()
-		,finalize: mongoMapReduceFunctions.finalize.toString()
+		,map: phases.map.toString()
+		,reduce: phases.reduce.toString()
+		,finalize: phases.finalize.toString()
 		,out: {reduce: outputCollectionName}
 		,scope: scope
 		,verbose: true
@@ -174,8 +76,8 @@ var runMapReduce = function(collectionName, outputCollectionName, emitKeys, opti
 	}
 
 	var info = [];
-	for (var k in emitKeys) {
-		info.push(emitKeys[k].name || k);
+	for (var k in mappers) {
+		info.push(mappers[k].name || k);
 	}
 
 	var db = mongoose.connection;
@@ -183,7 +85,7 @@ var runMapReduce = function(collectionName, outputCollectionName, emitKeys, opti
 	/*db.collection(collectionName).count(params.query, function(err, totalCount) {
 		console.log('  * running MapReduce for '+totalCount+' '+collectionName+' to '+outputCollectionName+' with key: '+info.join(' | '));*/
 		console.info('  * running MapReduce for collection ' + collectionName + ' ==> ' + outputCollectionName);
-		console.info('  * emit key: '+info.join(keys.KEY_SEPARATOR));
+		console.info('  * emit key: '+info.join(mappers.KEY_SEPARATOR));
 		console.info('  * aggregate values: '+scope.aggregates.join(', '));
 		console.info('  * options: '+logOptions.join(', '));
 		console.info('  * executing MapReduce...');
@@ -196,11 +98,11 @@ var runMapReduce = function(collectionName, outputCollectionName, emitKeys, opti
 			} else {
 
 				console.success('  * done. ensuring required indexes ...');
-				for (var k in emitKeys) {
-					if (emitKeys[k].index) {
+				for (var k in mappers) {
+					if (mappers[k].index) {
 						var fieldName = 'value.' + k;
 						console.info('  * building key index for '+fieldName+' ...');
-						if (!emitKeys[k].index.call(emitKeys[k], 
+						if (!mappers[k].index.call(mappers[k], 
 								db.collection(outputCollectionName), fieldName)) {
 							console.error('ERROR: could not build index');
 							//return false;
@@ -236,6 +138,7 @@ var runMapReduce = function(collectionName, outputCollectionName, emitKeys, opti
 
 module.exports = {
 	runMapReduce: runMapReduce,
-	EmitKey: EmitKey,
-	getAttr: getAttr
-}
+	Mapper: Mapper,
+	util: util,
+	scopeFunctions: scopeFunctions
+};

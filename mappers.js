@@ -1,143 +1,14 @@
-var coordinates = require('../../../geogoose/').coordinates,
-	coordinates2d = coordinates.coordinates2d,
-	getBounds = coordinates.getBounds,
-	utils = require('../../../utils'),
-	findExtremes = utils.findExtremes,
-	setStats = utils.setStats,
-	util = require('../../import/data_transform/util'),
-	getAttr = util.getAttr, setAttr = util.setAttr;
-
-/*
-The following code can both be executed by Node and MongoDB during the MapReduce
-operation. The latter needs to be passed a scope object containing all the 
-utility functions that are used by the code below as MongoDB Code objects. 
-The module exports an object called scopeFunctions for this purpose. 
-*/
-
-var dump = function(obj) {
-	var _dump = function(obj, indent) {
-		var str = '';
-		for (var k in obj) {
-			for (var i = 0; i < indent * 2; i++) {
-				str += ' ';
-			}
-			var d = '';
-			if (obj[k] == null) {
-				d = k + ': null\n';
-			} else if (typeof obj[k] == 'function') {
-				d = k + ': [Function]\n';
-			} else if (typeof obj[k] == 'object') {
-				if (obj[k].isObjectId) {
-					d = k + ': ' + obj[k].str + '\n';
-				} else {
-					d = k + ':\n' + _dump(obj[k], indent + 1);
-				}
-			} else {
-				d = k + ': ' + obj[k] + '\n';
-			}
-			str += d;
-		}
-		return str;
-	};
-	return _dump(obj, 0);
-};
-
-
-/*
-Iterates over the fields listed in fieldNames in obj, and calls the iterator 
-for each field, passing it the field name and the original object.
-Listed field names may end with a wildcard, for instance "foo.bar.*", 
-in which case the iterator would be called for each individual element of bar.
-*/
-var iterFields = function(fieldNames, obj, iterator) {
-	arrayMap.call(fieldNames, function(fieldName) {
-		if (fieldName.substr(-2) == '.*') {
-			var fieldName = fieldName.substr(0, fieldName.length - 2);
-				el = getAttr(obj, fieldName);
-			for (var key in el) {
-				iterator(fieldName + '.' + key, obj);
-			}
-		} else {
-			iterator(fieldName, obj);
-		}
-	});
-};
-
-/*
-MongoDB does not have Array.isArray, hence this function.
-*/
-isArray = function (v) {
-  return v && typeof v === 'object' && typeof v.length === 'number' && !(v.propertyIsEnumerable('length'));
+// unpack scope functions to local scope, unfortunately with eval 
+var scopeFunctions = require('./scope_functions');
+for (var k in scopeFunctions) {
+	eval('var ' + k + ' = scopeFunctions[k]');
 }
 
-/*
-MongoDB does not have Array.map, hence this function.
-*/
-var arrayMap = function(iterator) {
-	var arr = this,
-		result = [];
-	for (var i = 0; i < arr.length; i++) {
-		result.push(iterator(arr[i]));
-	}
-	return result;
-}
-
-/*
-MongoDB does not have Array.reduce, hence this function.
-*/
-var arrayReduce = function(iterator, initial) {
-	var arr = this,
-		current = initial;
-	for (var i = 0; i < arr.length; i++) {
-		current = iterator(current, arr[i], i);
-	}
-	return current;
-}
-
-var lpad = function(str, padString, length) {
-	var s = new String(str);
-    while (s.length < length) {
-        s = padString + s;
-    }
-    return s;
-};
-
-// Returns the week number for this date.  dowOffset is the day of week the week.
-// "starts" on for your locale - it can be from 0 to 6. If dowOffset is 1 (Monday),
-// the week returned is the ISO 8601 week number.
-// @param int dowOffset
-// @return int
-var getWeek = function(date, dowOffset) {
-	dowOffset = typeof(dowOffset) == 'int' ? dowOffset : 0; //default dowOffset to zero
-	var newYear = new Date(date.getFullYear(),0,1);
-	var day = newYear.getDay() - dowOffset; //the day of week the year begins on
-	day = (day >= 0 ? day : day + 7);
-	var daynum = Math.floor((date.getTime() - newYear.getTime() - 
-		(date.getTimezoneOffset()-newYear.getTimezoneOffset()) * 60000) / 86400000) + 1;
-	var weeknum;
-	//if the year starts before the middle of a week
-	if(day < 4) {
-		weeknum = Math.floor((daynum+day-1)/7) + 1;
-		if(weeknum > 52) {
-			nYear = new Date(date.getFullYear() + 1,0,1);
-			nday = nYear.getDay() - dowOffset;
-			nday = nday >= 0 ? nday : nday + 7;
-			/*if the next year starts before the middle of
- 			  the week, it is week #1 of that year*/
-			weeknum = nday < 4 ? 1 : 53;
-		}
-	}
-	else {
-		weeknum = Math.floor((daynum+day-1)/7);
-	}
-	return weeknum;
-};
-
-var EmitKey = 
+var Mapper = 
 {
 	Copy: function() 
 	{
-		this.get = function(value) {
+		this.map = function(value) {
 			return value;
 		};
 		return this;
@@ -147,7 +18,7 @@ var EmitKey =
 
 		Daily: function(t) 
 		{
-			this.get = function(t) {
+			this.map = function(t) {
 				var t = new Date(t);
 				return [
 					t.getFullYear()+'-'+lpad(t.getMonth(), '0', 2)+'-'+lpad(t.getUTCDate(), '0', 2),
@@ -159,7 +30,6 @@ var EmitKey =
 				var index = {};
 				index[field_name] = 1;
 				collection.ensureIndex(index, function() {});
-				//return (utils.collectionHasIndex(collection, index));
 				return true;
 			};
 			return this;
@@ -167,7 +37,7 @@ var EmitKey =
 
 		Weekly: function(t) 
 		{
-			this.get = function(t) {
+			this.map = function(t) {
 				var t = new Date(t);
 				var week = getWeek(t, 1);
 				var day = t.getDay(),
@@ -183,7 +53,6 @@ var EmitKey =
 				var index = {};
 				index[field_name] = 1;
 				collection.ensureIndex(index, function() {});
-				//return (utils.collectionHasIndex(collection, index));
 				return true;
 			};
 			return this;
@@ -191,7 +60,7 @@ var EmitKey =
 
 		Yearly: function(t) 
 		{
-			this.get = function(t) {
+			this.map = function(t) {
 				var t = new Date(t);
 				return [
 					t.getFullYear(),
@@ -203,7 +72,6 @@ var EmitKey =
 				var index = {};
 				index[field_name] = 1;
 				collection.ensureIndex(index, function() {});
-				//return (utils.collectionHasIndex(collection, index));
 				return true;
 			};
 			return this;
@@ -225,7 +93,7 @@ var EmitKey =
 				: (gridW != undefined ? gridW + '' : '')
 			this.prefix = /*name + ':'*/'';
 
-			this.get = function(geometry) {
+			this.map = function(geometry) {
 				if (!geometry) return;
 
 				/* returns 
@@ -339,7 +207,6 @@ var EmitKey =
 					var index = {};
 					index[field_name] = '2d';
 					collection.ensureIndex(index, function() {});
-					//return (utils.collectionHasIndex(collection, index));
 					return true;
 				};
 			}
@@ -354,7 +221,7 @@ var EmitKey =
 		this.steps = steps;
 		this.min = min - min % this.step;
 		this.max = max - max % this.step;
-		this.get = function(val) {
+		this.map = function(val) {
 			var stepVal = val - val % this.step;
 			return [
 				stepVal, 
@@ -367,25 +234,8 @@ var EmitKey =
 };
 
 module.exports = {
-	EmitKey: EmitKey,
-	// the functions that need to be in the scope of the EmitKey get() methods,
-	// apart from the EmitKey object itself, this.
-	scopeFunctions: {
-		lpad: lpad,
-		getBounds: coordinates.getBounds,
-		bboxFromBounds: coordinates.bboxFromBounds,
-		coordinates2d: coordinates2d,
-		overflow: coordinates.overflow,
-		getWeek: getWeek,
-		getAttr: getAttr,
-		setAttr: setAttr,
-		isArray: isArray,
-		findExtremes: findExtremes,
-		setStats: setStats,
-		arrayMap: arrayMap,
-		arrayReduce: arrayReduce,
-		iterFields: iterFields,
-		dump: dump
-	},
+	Mapper: Mapper,
+	// the functions that need to be in the scope of the Mapper get() methods,
+	// apart from the Mapper object itself, this.
 	KEY_SEPARATOR: '|'
 };
