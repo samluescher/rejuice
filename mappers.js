@@ -215,20 +215,21 @@ var Mapper =
 		}
 	},
 
-	Histogram: function(min, max, steps) 
+	Histogram: function(min, max, numBins) 
 	{
-		this.step = (max - min) / steps;
-		this.steps = steps;
-		this.min = min - min % this.step;
-		this.max = max - max % this.step;
+		this.maxBin = numBins - 1;
+		this.max = max;
+		this.min = min;
 		this.map = function(val) {
-			var stepVal = val - val % this.step;
+			var normVal = (val - this.min) / (this.max - this.min),
+				bin = Math.round(normVal * this.maxBin);
 			return [
-				stepVal, 
-				{x: Math.round((stepVal - this.min) / this.step)}
+				bin, 
+				val,
+				{bin: bin / this.maxBin}
 			];
 		};
-		this.name = 'histogram_'+steps;
+		this.name = 'histogram_' + numBins;
 	}
 
 };
