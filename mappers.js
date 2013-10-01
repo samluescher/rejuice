@@ -221,6 +221,7 @@ var Mapper =
 		this.max = max;
 		this.min = min;
 		this.map = function(val) {
+			if (typeof val != 'number') return;
 			var normVal = (val - this.min) / (this.max - this.min),
 				bin = Math.round(normVal * this.maxBin);
 			return [
