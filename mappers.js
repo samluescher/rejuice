@@ -217,17 +217,18 @@ var Mapper =
 
 	Histogram: function(min, max, numBins) 
 	{
+		this.numBins = numBins;
 		this.maxBin = numBins - 1;
+		this.binWidth = (max - min) / numBins;
 		this.max = max;
 		this.min = min;
 		this.map = function(val) {
 			if (typeof val != 'number') return;
 			var normVal = (val - this.min) / (this.max - this.min),
-				bin = Math.round(normVal * this.maxBin);
+				bin = Math.max(0, Math.min(this.maxBin, Math.floor(normVal * this.numBins)));
 			return [
 				bin, 
-				val,
-				{bin: bin / this.maxBin}
+				this.min + bin * this.binWidth
 			];
 		};
 		this.name = 'histogram_' + numBins;
