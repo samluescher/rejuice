@@ -19,20 +19,20 @@ var phases =
 			// get the emit key from the Mapper's get() method
 			// var f = mappers[k].map;
 			var f = mappers_code[k]; 
-				keyContent = f.call(mappers[k], getAttr(this, k), this);
+				mapped = f.call(mappers[k], getAttr(this, k), this);
 			
 			// if no key is returned, do not emit.
-			if (!keyContent) return;
+			if (!mapped) return;
 
-			if (isArray(keyContent)) {
+			if (isArray(mapped)) {
 				// if the return value is an Array, the first element is the emit key content
 				// and the second is an arbitrary value to be inserted into the data
-				keySegments.push(keyContent[0]);
-				setAttr(emitted, k, keyContent[1]);
+				keySegments.push(mapped[0]);
+				setAttr(emitted, k, mapped[1]);
 			} else {
 				// otherwise the the emit key content is inserted into the data
-				keySegments.push(keyContent);
-				setAttr(emitted, k, keyContent);
+				keySegments.push(mapped);
+				setAttr(emitted, k, mapped);
 			}
 		}
 		var fullKey = keySegments.join(KEY_SEPARATOR);
