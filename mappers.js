@@ -112,14 +112,14 @@ var Mapper =
 
 					if (gW != undefined) {
 						// west of tile
-						gX = Math.round((w - w % gW) / gW); 
+						gX = Math.floor(w / gW); 
 						w = gX * gW; 
 						// east of tile
 						e = w + gW;
 					}
 					if (gH != undefined) {
 						// south of tile
-						gY = Math.round((s - s % gH) / gH); 
+						gY = Math.floor(s / gH); 
 						s = gY * gH; 
 						// north of tile
 						n = s + gH;
