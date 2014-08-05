@@ -1,4 +1,4 @@
-var coordinates = require('../../../geogoose/').coordinates,
+var coordinates = require('geogoose').coordinates,
 	getBounds = coordinates.getBounds,
 	utils = require('../../../utils'),
 	data_transform = require('../../import/data_transform'),
