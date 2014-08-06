@@ -1,7 +1,7 @@
 var coordinates = require('geogoose').coordinates,
+	transmeta = require('transmeta'),
 	getBounds = coordinates.getBounds,
 	utils = require('../../../utils'),
-	data_transform = require('../../import/data_transform'),
 	util = require('./util');
 
 /*
@@ -18,8 +18,8 @@ module.exports = {
 	coordinates2d: coordinates.coordinates2d,
 	overflow: coordinates.overflow,
 	getWeek: util.getWeek,
-	getAttr: data_transform.util.getAttr,
-	setAttr: data_transform.util.setAttr,
+	getAttr: transmeta.util.getAttr,
+	setAttr: transmeta.util.setAttr,
 	isArray: util.isArray,
 	findExtremes: util.findExtremes,
 	setStats: util.setStats,
