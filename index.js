@@ -35,9 +35,9 @@ var runMapReduce = function(collectionName, outputCollectionName, mappers, optio
 		scope.events[eventName] = new Code(options.events[eventName]);
 	}
 
- 	// Same goes for all Mapper get methods. 
- 	// Note that when these functions are called from the map() function, 
- 	// they are passed the Mapper object.
+	// Same goes for all Mapper get methods. 
+	// Note that when these functions are called from the map() function, 
+	// they are passed the Mapper object.
 	for (var keyName in mappers) {
 		scope.mappers_code[keyName] = new Code(mappers[keyName].map);
 	}
@@ -89,6 +89,9 @@ var runMapReduce = function(collectionName, outputCollectionName, mappers, optio
 		console.info('  * aggregate values: '+scope.aggregates.join(', '));
 		console.info('  * options: '+logOptions.join(', '));
 		console.info('  * executing MapReduce...');
+
+		// params.scope contains hashes such as {'mappers': {'properties.value': 'foo'}} and Mongoose > 3.8.8
+		// seems to check BSON keys in scope and throw an error if they contain periods. Rolling back to 3.8.3 fixes it.
 		mongoose.connection.db.executeDbCommand(params, function(err, op) {
 			if (err || (op.documents.length && op.documents[0].errmsg)) {
 				if (!err) {
