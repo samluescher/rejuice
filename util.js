@@ -5,17 +5,17 @@ Listed field names may end with a wildcard, for instance "foo.bar.*",
 in which case the iterator would be called for each individual element of bar.
 */
 var iterFields = function(fieldNames, obj, iterator) {
-	arrayMap.call(fieldNames, function(fieldName) {
-		if (fieldName.substr(-2) == '.*') {
-			var fieldName = fieldName.substr(0, fieldName.length - 2);
-				el = getAttr(obj, fieldName);
-			for (var key in el) {
-				iterator(fieldName + '.' + key, obj);
-			}
-		} else {
-			iterator(fieldName, obj);
-		}
-	});
+    arrayMap.call(fieldNames, function(fieldName) {
+        if (fieldName.substr(-2) == '.*') {
+            var fieldName = fieldName.substr(0, fieldName.length - 2);
+                el = getAttr(obj, fieldName);
+            for (var key in el) {
+                iterator(fieldName + '.' + key, obj);
+            }
+        } else {
+            iterator(fieldName, obj);
+        }
+    });
 };
 
 /*
@@ -31,12 +31,12 @@ MongoDB does not have Array.map, hence this function.
 */
 var arrayMap = function(iterator) {
     if (Array.map) return Array.map.call(this, iterator);
-	var arr = this,
-		result = [];
-	for (var i = 0; i < arr.length; i++) {
-		result.push(iterator(arr[i]));
-	}
-	return result;
+    var arr = this,
+        result = [];
+    for (var i = 0; i < arr.length; i++) {
+        result.push(iterator(arr[i]));
+    }
+    return result;
 }
 
 /*
@@ -44,16 +44,16 @@ MongoDB does not have Array.reduce, hence this function.
 */
 var arrayReduce = function(iterator, initial) {
     if (Array.reduce) return Array.reduce.call(this, iterator, initial);
-	var arr = this,
-		current = initial;
-	for (var i = 0; i < arr.length; i++) {
-		current = iterator(current, arr[i], i);
-	}
-	return current;
+    var arr = this,
+        current = initial;
+    for (var i = 0; i < arr.length; i++) {
+        current = iterator(current, arr[i], i);
+    }
+    return current;
 }
 
 var lpad = function(str, padString, length) {
-	var s = new String(str);
+    var s = new String(str);
     while (s.length < length) {
         s = padString + s;
     }
@@ -66,29 +66,29 @@ var lpad = function(str, padString, length) {
 // @param int dowOffset
 // @return int
 var getWeek = function(date, dowOffset) {
-	dowOffset = typeof(dowOffset) == 'int' ? dowOffset : 0; //default dowOffset to zero
-	var newYear = new Date(date.getFullYear(),0,1);
-	var day = newYear.getDay() - dowOffset; //the day of week the year begins on
-	day = (day >= 0 ? day : day + 7);
-	var daynum = Math.floor((date.getTime() - newYear.getTime() - 
-		(date.getTimezoneOffset()-newYear.getTimezoneOffset()) * 60000) / 86400000) + 1;
-	var weeknum;
-	//if the year starts before the middle of a week
-	if(day < 4) {
-		weeknum = Math.floor((daynum+day-1)/7) + 1;
-		if(weeknum > 52) {
-			nYear = new Date(date.getFullYear() + 1,0,1);
-			nday = nYear.getDay() - dowOffset;
-			nday = nday >= 0 ? nday : nday + 7;
-			/*if the next year starts before the middle of
- 			  the week, it is week #1 of that year*/
-			weeknum = nday < 4 ? 1 : 53;
-		}
-	}
-	else {
-		weeknum = Math.floor((daynum+day-1)/7);
-	}
-	return weeknum;
+    dowOffset = typeof(dowOffset) == 'int' ? dowOffset : 0; //default dowOffset to zero
+    var newYear = new Date(date.getFullYear(),0,1);
+    var day = newYear.getDay() - dowOffset; //the day of week the year begins on
+    day = (day >= 0 ? day : day + 7);
+    var daynum = Math.floor((date.getTime() - newYear.getTime() - 
+        (date.getTimezoneOffset()-newYear.getTimezoneOffset()) * 60000) / 86400000) + 1;
+    var weeknum;
+    //if the year starts before the middle of a week
+    if(day < 4) {
+        weeknum = Math.floor((daynum+day-1)/7) + 1;
+        if(weeknum > 52) {
+            nYear = new Date(date.getFullYear() + 1,0,1);
+            nday = nYear.getDay() - dowOffset;
+            nday = nday >= 0 ? nday : nday + 7;
+            /*if the next year starts before the middle of
+              the week, it is week #1 of that year*/
+            weeknum = nday < 4 ? 1 : 53;
+        }
+    }
+    else {
+        weeknum = Math.floor((daynum+day-1)/7);
+    }
+    return weeknum;
 };
 
 /**

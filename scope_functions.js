@@ -1,7 +1,6 @@
 var coordinates = require('geogoose').coordinates,
 	transmeta = require('transmeta'),
 	getBounds = coordinates.getBounds,
-	utils = require('../../../utils'),
 	util = require('./util');
 
 /*
