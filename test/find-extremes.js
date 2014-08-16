@@ -1,4 +1,4 @@
-util = require('../util'),
+util = require('../lib/util'),
 	findExtremes = util.findExtremes,
 	setStats = util.setStats,
 	assert = require('assert');

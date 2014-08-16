@@ -1,4 +1,4 @@
-var	abstraction = require('../'),
+var	abstraction = require('../lib/'),
 	Mapper = abstraction.Mapper,
 	findExtremes = abstraction.util.findExtremes,
 	assert = require('assert');

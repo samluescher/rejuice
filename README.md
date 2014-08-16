@@ -1,7 +1,7 @@
 # rejuice
 
 An abstraction layer for MapReduce operations on numeric, temporal, and spatial data;
-enabling features such as standard deviation, time gridding, and geometric clustering.
+enabling features such as numeric aggregation, time gridding, and geometric clustering.
 
 Copyright (c) 2013-2014, Samuel Luescher
 

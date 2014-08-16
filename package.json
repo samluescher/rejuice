@@ -12,7 +12,9 @@
     "geogoose": "git+https://git@github.com/samluescher/geogoose",
     "transmeta": "git+https://git@github.com/samluescher/transmeta"
   },
+  "main": "lib",
   "directories": {
+    "lib": "lib",
     "test": "test"
   },
   "scripts": {
@@ -23,8 +25,8 @@
     "url": "https://github.com/samluescher/rejuice.git"
   },
   "keywords": [
-    "GeoJSON",
-    "Mongoose",
+    "MapReduce",
+    "Map Reduce",
     "Node.js"
   ],
   "author": "Samuel Luescher <sam@samluescher.net>",
